@@ -3,6 +3,7 @@ package zogo
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 type StringValidator struct {
@@ -63,6 +64,48 @@ func (v *StringValidator) Length(length int) *StringValidator {
 	return v
 }
 
+// Email validates email format
+func (v *StringValidator) Email() *StringValidator {
+	v.isEmail = true
+	return v
+}
+
+// URL validates URL format
+func (v *StringValidator) URL() *StringValidator {
+	v.isURL = true
+	return v
+}
+
+// UUID validates UUID format
+func (v *StringValidator) UUID() *StringValidator {
+	v.isUUID = true
+	return v
+}
+
+// Regex validates against a regular expression pattern
+func (v *StringValidator) Regex(pattern string) *StringValidator {
+	v.pattern = regexp.MustCompile(pattern)
+	return v
+}
+
+// StartsWith checks if string starts with the given prefix
+func (v *StringValidator) StartsWith(prefix string) *StringValidator {
+	v.startsWith = &prefix
+	return v
+}
+
+// EndsWith checks if string ends with the given suffix
+func (v *StringValidator) EndsWith(suffix string) *StringValidator {
+	v.endsWith = &suffix
+	return v
+}
+
+// Contains checks if string contains the given substring
+func (v *StringValidator) Contains(substring string) *StringValidator {
+	v.contains = &substring
+	return v
+}
+
 // Parse validates the input value
 func (v *StringValidator) Parse(value any) ParseResult {
 	// Check if value is nil
@@ -91,6 +134,41 @@ func (v *StringValidator) Parse(value any) ParseResult {
 		return FailureMessage(fmt.Sprintf("String must be at most %d characters", *v.maxLen))
 	}
 
+	// Check email format
+	if v.isEmail && !isValidEmail(str) {
+		return FailureMessage("Invalid email format")
+	}
+
+	// Check URL format
+	if v.isURL && !isValidURL(str) {
+		return FailureMessage("Invalid URL format")
+	}
+
+	// Check UUID format
+	if v.isUUID && !isValidUUID(str) {
+		return FailureMessage("Invalid UUID format")
+	}
+
+	// Check regex pattern
+	if v.pattern != nil && !v.pattern.MatchString(str) {
+		return FailureMessage("String does not match required pattern")
+	}
+
+	// Check startsWith
+	if v.startsWith != nil && !strings.HasPrefix(str, *v.startsWith) {
+		return FailureMessage(fmt.Sprintf("String must start with '%s'", *v.startsWith))
+	}
+
+	// Check endsWith
+	if v.endsWith != nil && !strings.HasSuffix(str, *v.endsWith) {
+		return FailureMessage(fmt.Sprintf("String must end with '%s'", *v.endsWith))
+	}
+
+	// Check contains
+	if v.contains != nil && !strings.Contains(str, *v.contains) {
+		return FailureMessage(fmt.Sprintf("String must contain '%s'", *v.contains))
+	}
+
 	return Success(str)
 }
 
@@ -111,4 +189,28 @@ func typeof(value any) string {
 	default:
 		return "unknown"
 	}
+}
+
+// isValidEmail checks if string is a valid email
+func isValidEmail(email string) bool {
+	// Basic email regex pattern
+	pattern := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(email)
+}
+
+// isValidURL checks if string is a valid URL
+func isValidURL(str string) bool {
+	// Basic URL pattern - starts with http:// or https://
+	pattern := `^https?://[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$`
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(str)
+}
+
+// isValidUUID checks if string is a valid UUID
+func isValidUUID(str string) bool {
+	// UUID v4 pattern
+	pattern := `^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(strings.ToLower(str))
 }
