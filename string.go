@@ -106,6 +106,24 @@ func (v *StringValidator) Contains(substring string) *StringValidator {
 	return v
 }
 
+// Trim removes leading and trailing whitespace
+func (v *StringValidator) Trim() *StringValidator {
+	v.shouldTrim = true
+	return v
+}
+
+// ToLowerCase converts string to lowercase
+func (v *StringValidator) ToLowerCase() *StringValidator {
+	v.shouldLowercase = true
+	return v
+}
+
+// ToUpperCase converts string to uppercase
+func (v *StringValidator) ToUpperCase() *StringValidator {
+	v.shouldUppercase = true
+	return v
+}
+
 // Parse validates the input value
 func (v *StringValidator) Parse(value any) ParseResult {
 	// Check if value is nil
@@ -117,6 +135,19 @@ func (v *StringValidator) Parse(value any) ParseResult {
 	str, ok := value.(string)
 	if !ok {
 		return FailureMessage("Expected string, received " + typeof(value))
+	}
+
+	// Apply transformations first
+	if v.shouldTrim {
+		str = strings.TrimSpace(str)
+	}
+
+	if v.shouldLowercase {
+		str = strings.ToLower(str)
+	}
+
+	if v.shouldUppercase {
+		str = strings.ToUpper(str)
 	}
 
 	// Check exact length if specified
@@ -193,15 +224,13 @@ func typeof(value any) string {
 
 // isValidEmail checks if string is a valid email
 func isValidEmail(email string) bool {
-	// Basic email regex pattern
-	pattern := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 	re := regexp.MustCompile(pattern)
 	return re.MatchString(email)
 }
 
 // isValidURL checks if string is a valid URL
 func isValidURL(str string) bool {
-	// Basic URL pattern - starts with http:// or https://
 	pattern := `^https?://[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$`
 	re := regexp.MustCompile(pattern)
 	return re.MatchString(str)
@@ -209,7 +238,6 @@ func isValidURL(str string) bool {
 
 // isValidUUID checks if string is a valid UUID
 func isValidUUID(str string) bool {
-	// UUID v4 pattern
 	pattern := `^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`
 	re := regexp.MustCompile(pattern)
 	return re.MatchString(strings.ToLower(str))

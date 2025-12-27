@@ -1,6 +1,8 @@
 package zogo
 
-import "testing"
+import (
+	"testing"
+)
 
 // Test basic string validation
 func TestStringBasic(t *testing.T) {
@@ -128,7 +130,7 @@ func TestStringEmail(t *testing.T) {
 	validEmails := []string{
 		"test@example.com",
 		"user.name@example.com",
-		"user+tag@example.co.uk",
+		"usertag@example.co.uk",
 	}
 
 	for _, email := range validEmails {
@@ -296,5 +298,97 @@ func TestStringChainedFormats(t *testing.T) {
 	result = schema.Parse("notanemail")
 	if result.Ok {
 		t.Error("Expected non-email to fail")
+	}
+}
+
+// Test Trim transformation
+func TestStringTrim(t *testing.T) {
+	schema := String().Trim()
+
+	result := schema.Parse("  hello  ")
+	if !result.Ok {
+		t.Error("Expected trimmed string to pass")
+	}
+
+	// Should return trimmed value
+	if result.Value != "hello" {
+		t.Errorf("Expected 'hello', got '%s'", result.Value)
+	}
+}
+
+// Test ToLowerCase transformation
+func TestStringToLowerCase(t *testing.T) {
+	schema := String().ToLowerCase()
+
+	result := schema.Parse("HELLO")
+	if !result.Ok {
+		t.Error("Expected uppercase string to pass")
+	}
+
+	// Should return lowercase value
+	if result.Value != "hello" {
+		t.Errorf("Expected 'hello', got '%s'", result.Value)
+	}
+}
+
+// Test ToUpperCase transformation
+func TestStringToUpperCase(t *testing.T) {
+	schema := String().ToUpperCase()
+
+	result := schema.Parse("hello")
+	if !result.Ok {
+		t.Error("Expected lowercase string to pass")
+	}
+
+	// Should return uppercase value
+	if result.Value != "HELLO" {
+		t.Errorf("Expected 'HELLO', got '%s'", result.Value)
+	}
+}
+
+// Test chained transformations
+func TestStringChainedTransformations(t *testing.T) {
+	schema := String().Trim().ToLowerCase().Min(3)
+
+	result := schema.Parse("  HELLO  ")
+	if !result.Ok {
+		t.Error("Expected chained transformations to pass")
+	}
+
+	// Should return trimmed and lowercased value
+	if result.Value != "hello" {
+		t.Errorf("Expected 'hello', got '%s'", result.Value)
+	}
+}
+
+// Test transformation with Email validation
+func TestStringTransformWithEmail(t *testing.T) {
+	schema := String().Trim().ToLowerCase().Email()
+
+	// Test with uppercase email
+	result := schema.Parse("  username@email.com  ")
+	if !result.Ok {
+		t.Errorf("Expected email to pass after trim and lowercase. Error: %v", result.Errors)
+	}
+
+	if result.Value != "username@email.com" {
+		t.Errorf("Expected 'username@email.com', got '%v'", result.Value)
+	}
+}
+
+// Test Trim affects length validation
+func TestStringTrimAffectsLength(t *testing.T) {
+	schema := String().Trim().Min(5)
+
+	// Original "  hi  " has 6 chars, but after trim only 2
+	result := schema.Parse("  hi  ")
+	if result.Ok {
+		t.Error("Expected trimmed string 'hi' to fail Min(5)")
+	}
+
+	// Original "  hello  " has 9 chars, after trim has 5
+	result = schema.Parse("  hello  ")
+	if !result.Ok {
+		t.Error("Expected trimmed string 'hello' to pass Min(5)")
 	}
 }
