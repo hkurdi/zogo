@@ -430,18 +430,6 @@ Contributions welcome! Please open an issue or PR.
 
 MIT © 2025 Hamza L Kurdi
 
-## Roadmap
-
-- [ ] Core types (String, Number, Boolean)
-- [ ] Complex types (Object, Array)
-- [ ] Advanced types (Union, Intersection, Tuple)
-- [ ] Date validation
-- [ ] Custom error messages
-- [ ] Async validation
-- [ ] JSON Schema export
-- [ ] Performance benchmarks
-- [ ] Full test coverage
-
 ## Inspiration
 
 This project is heavily inspired by:
