@@ -2,6 +2,10 @@
 
 **A TypeScript Zod-inspired schema validation library for Go**
 
+![GitHub release](https://img.shields.io/github/v/release/hkurdi/zogo)
+![Go version](https://img.shields.io/github/go-mod/go-version/hkurdi/zogo)
+![License](https://img.shields.io/github/license/hkurdi/zogo)
+
 Zogo provides a fluent, type-safe API for validating data structures in Go. Perfect for validating JSON from APIs, configuration files, user input, and more.
 
 ```go
