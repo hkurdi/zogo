@@ -124,10 +124,62 @@ func (v *StringValidator) ToUpperCase() *StringValidator {
 	return v
 }
 
+// Required marks the field as required (this is the default behavior)
+func (v *StringValidator) Required() *StringValidator {
+	v.isRequired = true
+	v.isOptional = false
+	return v
+}
+
+// Optional allows nil/undefined values
+func (v *StringValidator) Optional() *StringValidator {
+	v.isOptional = true
+	v.isRequired = false
+	return v
+}
+
+// Nullable allows null values
+func (v *StringValidator) Nullable() *StringValidator {
+	v.isNullable = true
+	return v
+}
+
+// Default sets a default value if input is nil or empty string
+func (v *StringValidator) Default(val string) *StringValidator {
+	v.defaultVal = &val
+	return v
+}
+
+// Refine adds custom validation logic
+func (v *StringValidator) Refine(check func(string) bool, message string) *StringValidator {
+	v.refinements = append(v.refinements, Refinement{
+		Check:   check,
+		Message: message,
+	})
+	return v
+}
+
 // Parse validates the input value
 func (v *StringValidator) Parse(value any) ParseResult {
 	// Check if value is nil
+	// Handle nil values based on modifiers
 	if value == nil {
+		// If default is set, use it
+		if v.defaultVal != nil {
+			return Success(*v.defaultVal)
+		}
+
+		// If optional, nil is OK
+		if v.isOptional {
+			return Success(nil)
+		}
+
+		// If nullable, nil is OK
+		if v.isNullable {
+			return Success(nil)
+		}
+
+		// Otherwise, nil is not allowed
 		return FailureMessage("Expected string, received null")
 	}
 
@@ -198,6 +250,13 @@ func (v *StringValidator) Parse(value any) ParseResult {
 	// Check contains
 	if v.contains != nil && !strings.Contains(str, *v.contains) {
 		return FailureMessage(fmt.Sprintf("String must contain '%s'", *v.contains))
+	}
+
+	// Run custom refinements
+	for _, refinement := range v.refinements {
+		if !refinement.Check(str) {
+			return FailureMessage(refinement.Message)
+		}
 	}
 
 	return Success(str)

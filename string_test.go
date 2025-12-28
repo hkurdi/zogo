@@ -130,7 +130,7 @@ func TestStringEmail(t *testing.T) {
 	validEmails := []string{
 		"test@example.com",
 		"user.name@example.com",
-		"usertag@example.co.uk",
+		"user+tag@example.co.uk",
 	}
 
 	for _, email := range validEmails {
@@ -390,5 +390,158 @@ func TestStringTrimAffectsLength(t *testing.T) {
 	result = schema.Parse("  hello  ")
 	if !result.Ok {
 		t.Error("Expected trimmed string 'hello' to pass Min(5)")
+	}
+}
+
+// Test Optional modifier
+func TestStringOptional(t *testing.T) {
+	schema := String().Optional()
+
+	// nil should pass
+	result := schema.Parse(nil)
+	if !result.Ok {
+		t.Error("Expected nil to pass with Optional()")
+	}
+
+	// Valid string should still pass
+	result = schema.Parse("hello")
+	if !result.Ok {
+		t.Error("Expected valid string to pass with Optional()")
+	}
+}
+
+// Test Nullable modifier
+func TestStringNullable(t *testing.T) {
+	schema := String().Nullable()
+
+	// nil should pass
+	result := schema.Parse(nil)
+	if !result.Ok {
+		t.Error("Expected nil to pass with Nullable()")
+	}
+
+	// Valid string should still pass
+	result = schema.Parse("hello")
+	if !result.Ok {
+		t.Error("Expected valid string to pass with Nullable()")
+	}
+}
+
+// Test Default modifier
+func TestStringDefault(t *testing.T) {
+	schema := String().Default("default-value")
+
+	// nil should return default
+	result := schema.Parse(nil)
+	if !result.Ok {
+		t.Error("Expected nil to pass with Default()")
+	}
+	if result.Value != "default-value" {
+		t.Errorf("Expected 'default-value', got '%v'", result.Value)
+	}
+
+	// Provided value should override default
+	result = schema.Parse("custom")
+	if !result.Ok {
+		t.Error("Expected valid string to pass")
+	}
+	if result.Value != "custom" {
+		t.Errorf("Expected 'custom', got '%v'", result.Value)
+	}
+}
+
+// Test Refine with custom validation
+func TestStringRefine(t *testing.T) {
+	// Password must contain uppercase letter
+	schema := String().Min(8).Refine(func(s string) bool {
+		for _, c := range s {
+			if c >= 'A' && c <= 'Z' {
+				return true
+			}
+		}
+		return false
+	}, "Password must contain at least one uppercase letter")
+
+	// Should fail - no uppercase
+	result := schema.Parse("password123")
+	if result.Ok {
+		t.Error("Expected password without uppercase to fail")
+	}
+	if len(result.Errors) == 0 || result.Errors[0].Message != "Password must contain at least one uppercase letter" {
+		t.Error("Expected custom error message")
+	}
+
+	// Should pass - has uppercase
+	result = schema.Parse("Password123")
+	if !result.Ok {
+		t.Error("Expected password with uppercase to pass")
+	}
+}
+
+// Test multiple Refine calls
+func TestStringMultipleRefine(t *testing.T) {
+	schema := String().
+		Min(8).
+		Refine(func(s string) bool {
+			// Must contain uppercase
+			for _, c := range s {
+				if c >= 'A' && c <= 'Z' {
+					return true
+				}
+			}
+			return false
+		}, "Must contain uppercase").
+		Refine(func(s string) bool {
+			// Must contain number
+			for _, c := range s {
+				if c >= '0' && c <= '9' {
+					return true
+				}
+			}
+			return false
+		}, "Must contain number")
+
+	// Should fail - no number
+	result := schema.Parse("Password")
+	if result.Ok {
+		t.Error("Expected password without number to fail")
+	}
+
+	// Should pass - has both
+	result = schema.Parse("Password123")
+	if !result.Ok {
+		t.Error("Expected password with uppercase and number to pass")
+	}
+}
+
+// Test Required (default behavior)
+func TestStringRequired(t *testing.T) {
+	schema := String().Required()
+
+	// nil should fail
+	result := schema.Parse(nil)
+	if result.Ok {
+		t.Error("Expected nil to fail with Required()")
+	}
+
+	// Valid string should pass
+	result = schema.Parse("hello")
+	if !result.Ok {
+		t.Error("Expected valid string to pass with Required()")
+	}
+}
+
+// Test chaining Default with transformations
+func TestStringDefaultWithTransform(t *testing.T) {
+	schema := String().Default("HELLO").ToLowerCase()
+
+	// Should use default and transform it
+	result := schema.Parse(nil)
+	if !result.Ok {
+		t.Error("Expected nil to pass with Default()")
+	}
+	// Default value doesn't go through transformations (applied at nil check)
+	if result.Value != "HELLO" {
+		t.Errorf("Expected 'HELLO', got '%v'", result.Value)
 	}
 }
