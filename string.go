@@ -17,6 +17,15 @@ type StringValidator struct {
 	isEmail    bool
 	isURL      bool
 	isUUID     bool
+	isIP       bool
+	isIPv4     bool
+	isIPv6     bool
+	isBase64   bool
+	isHex      bool
+	isCUID     bool
+	isCUID2    bool
+	isULID     bool
+	isNanoid   bool
 	startsWith *string
 	endsWith   *string
 	contains   *string
@@ -79,6 +88,60 @@ func (v *StringValidator) URL() *StringValidator {
 // UUID validates UUID format
 func (v *StringValidator) UUID() *StringValidator {
 	v.isUUID = true
+	return v
+}
+
+// IP validates IPv4 or IPv6 address
+func (v *StringValidator) IP() *StringValidator {
+	v.isIP = true
+	return v
+}
+
+// IPv4 validates IPv4 address
+func (v *StringValidator) IPv4() *StringValidator {
+	v.isIPv4 = true
+	return v
+}
+
+// IPv6 validates IPv6 address
+func (v *StringValidator) IPv6() *StringValidator {
+	v.isIPv6 = true
+	return v
+}
+
+// Base64 validates base64 encoded string
+func (v *StringValidator) Base64() *StringValidator {
+	v.isBase64 = true
+	return v
+}
+
+// Hex validates hexadecimal string
+func (v *StringValidator) Hex() *StringValidator {
+	v.isHex = true
+	return v
+}
+
+// CUID validates CUID (Collision-resistant Unique Identifier)
+func (v *StringValidator) CUID() *StringValidator {
+	v.isCUID = true
+	return v
+}
+
+// CUID2 validates CUID2 format
+func (v *StringValidator) CUID2() *StringValidator {
+	v.isCUID2 = true
+	return v
+}
+
+// ULID validates ULID (Universally Unique Lexicographically Sortable Identifier)
+func (v *StringValidator) ULID() *StringValidator {
+	v.isULID = true
+	return v
+}
+
+// Nanoid validates Nanoid format
+func (v *StringValidator) Nanoid() *StringValidator {
+	v.isNanoid = true
 	return v
 }
 
@@ -232,6 +295,51 @@ func (v *StringValidator) Parse(value any) ParseResult {
 		return FailureMessage("Invalid UUID format")
 	}
 
+	// Check IP address
+	if v.isIP && !isValidIP(str) {
+		return FailureMessage("Invalid IP address")
+	}
+
+	// Check IPv4
+	if v.isIPv4 && !isValidIPv4(str) {
+		return FailureMessage("Invalid IPv4 address")
+	}
+
+	// Check IPv6
+	if v.isIPv6 && !isValidIPv6(str) {
+		return FailureMessage("Invalid IPv6 address")
+	}
+
+	// Check base64
+	if v.isBase64 && !isValidBase64(str) {
+		return FailureMessage("Invalid base64 string")
+	}
+
+	// Check hex
+	if v.isHex && !isValidHex(str) {
+		return FailureMessage("Invalid hexadecimal string")
+	}
+
+	// Check CUID
+	if v.isCUID && !isValidCUID(str) {
+		return FailureMessage("Invalid CUID format")
+	}
+
+	// Check CUID2
+	if v.isCUID2 && !isValidCUID2(str) {
+		return FailureMessage("Invalid CUID2 format")
+	}
+
+	// Check ULID
+	if v.isULID && !isValidULID(str) {
+		return FailureMessage("Invalid ULID format")
+	}
+
+	// Check Nanoid
+	if v.isNanoid && !isValidNanoid(str) {
+		return FailureMessage("Invalid Nanoid format")
+	}
+
 	// Check regex pattern
 	if v.pattern != nil && !v.pattern.MatchString(str) {
 		return FailureMessage("String does not match required pattern")
@@ -300,4 +408,235 @@ func isValidUUID(str string) bool {
 	pattern := `^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`
 	re := regexp.MustCompile(pattern)
 	return re.MatchString(strings.ToLower(str))
+}
+
+// isValidIP checks if string is a valid IP address (v4 or v6)
+func isValidIP(s string) bool {
+	return isValidIPv4(s) || isValidIPv6(s)
+}
+
+// isValidIPv4 checks if string is a valid IPv4 address
+func isValidIPv4(s string) bool {
+	parts := strings.Split(s, ".")
+	if len(parts) != 4 {
+		return false
+	}
+
+	for _, part := range parts {
+		if len(part) == 0 || len(part) > 3 {
+			return false
+		}
+
+		// Check for leading zeros (except "0" itself)
+		if len(part) > 1 && part[0] == '0' {
+			return false
+		}
+
+		num := 0
+		for _, ch := range part {
+			if ch < '0' || ch > '9' {
+				return false
+			}
+			num = num*10 + int(ch-'0')
+		}
+
+		if num > 255 {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isValidIPv6 checks if string is a valid IPv6 address
+func isValidIPv6(s string) bool {
+	// Basic IPv6 validation
+	// Supports standard format and :: compression
+	if strings.Contains(s, ":::") {
+		return false
+	}
+
+	// Split on ::
+	parts := strings.Split(s, "::")
+	if len(parts) > 2 {
+		return false
+	}
+
+	var groups []string
+	if len(parts) == 2 {
+		// Has compression
+		left := strings.Split(parts[0], ":")
+		right := strings.Split(parts[1], ":")
+
+		// Filter empty strings
+		leftFiltered := make([]string, 0)
+		for _, g := range left {
+			if g != "" {
+				leftFiltered = append(leftFiltered, g)
+			}
+		}
+
+		rightFiltered := make([]string, 0)
+		for _, g := range right {
+			if g != "" {
+				rightFiltered = append(rightFiltered, g)
+			}
+		}
+
+		totalGroups := len(leftFiltered) + len(rightFiltered)
+		if totalGroups > 7 {
+			return false
+		}
+
+		groups = append(leftFiltered, rightFiltered...)
+	} else {
+		groups = strings.Split(s, ":")
+		if len(groups) != 8 {
+			return false
+		}
+	}
+
+	// Validate each group
+	for _, group := range groups {
+		if len(group) == 0 || len(group) > 4 {
+			return false
+		}
+
+		for _, ch := range group {
+			if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// isValidBase64 checks if string is valid base64
+func isValidBase64(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	// Base64 length must be multiple of 4
+	if len(s)%4 != 0 {
+		return false
+	}
+
+	for i, ch := range s {
+		valid := (ch >= 'A' && ch <= 'Z') ||
+			(ch >= 'a' && ch <= 'z') ||
+			(ch >= '0' && ch <= '9') ||
+			ch == '+' || ch == '/' ||
+			(ch == '=' && i >= len(s)-2) // = only at end
+
+		if !valid {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isValidHex checks if string is valid hexadecimal
+func isValidHex(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	for _, ch := range s {
+		if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isValidCUID checks if string is a valid CUID
+// Format: c + timestamp (base36) + counter (base36) + fingerprint + random (base36)
+// Example: cjld2cjxh0000qzrmn831i7rn
+func isValidCUID(s string) bool {
+	if len(s) != 25 {
+		return false
+	}
+
+	if s[0] != 'c' {
+		return false
+	}
+
+	// Rest should be base36 (0-9, a-z)
+	for i := 1; i < len(s); i++ {
+		ch := s[i]
+		if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z')) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isValidCUID2 checks if string is a valid CUID2
+// CUID2 is variable length (24-32 chars) and starts with a letter
+func isValidCUID2(s string) bool {
+	length := len(s)
+	if length < 24 || length > 32 {
+		return false
+	}
+
+	// Must start with a letter
+	if s[0] < 'a' || s[0] > 'z' {
+		return false
+	}
+
+	// Rest should be alphanumeric lowercase
+	for i := 1; i < len(s); i++ {
+		ch := s[i]
+		if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z')) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isValidULID checks if string is a valid ULID
+// Format: 26 characters, base32 encoded (0-9, A-Z excluding I, L, O, U)
+// Example: 01ARZ3NDEKTSV4RRFFQ69G5FAV
+func isValidULID(s string) bool {
+	if len(s) != 26 {
+		return false
+	}
+
+	// ULID uses Crockford's base32: 0-9, A-Z excluding I, L, O, U
+	for _, ch := range s {
+		if !((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'H') ||
+			(ch >= 'J' && ch <= 'K') || (ch >= 'M' && ch <= 'N') ||
+			(ch >= 'P' && ch <= 'T') || (ch >= 'V' && ch <= 'Z')) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isValidNanoid checks if string is a valid Nanoid
+// Default Nanoid is 21 characters, URL-safe alphabet
+func isValidNanoid(s string) bool {
+	// Nanoid can be various lengths, but default is 21
+	// We'll accept 10-64 as reasonable range
+	length := len(s)
+	if length < 10 || length > 64 {
+		return false
+	}
+
+	// Nanoid uses URL-safe alphabet: A-Za-z0-9_-
+	for _, ch := range s {
+		if !((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') ||
+			(ch >= 'a' && ch <= 'z') || ch == '_' || ch == '-') {
+			return false
+		}
+	}
+
+	return true
 }
