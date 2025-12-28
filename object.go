@@ -150,5 +150,8 @@ func prependPath(path string) string {
 	if path == "" {
 		return ""
 	}
+	if len(path) > 0 && path[0] == '[' {
+		return path
+	}
 	return "." + path
 }
